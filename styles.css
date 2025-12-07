@@ -1,0 +1,263 @@
+body, .stApp {
+    background: linear-gradient(145deg, __PRIMARY_BG__, #0b1224);
+    color: __TEXT_COLOR__;
+}
+.block-container {
+    color: __TEXT_COLOR__;
+}
+h1, h2, h3, h4, h5, h6, p, span, label {
+    color: __TEXT_COLOR__ !important;
+}
+[data-testid="stSidebar"] {
+    background: __CARD_BG__;
+    color: __TEXT_COLOR__;
+}
+[data-testid="stHeader"] {
+    background: __PRIMARY_BG__;
+    box-shadow: none;
+    border-bottom: 1px solid __DIVIDER__;
+}
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] textarea,
+[data-testid="stSidebar"] .stNumberInput input {
+    background: #1f2937 !important;
+    color: __TEXT_COLOR__ !important;
+    border: 1px solid __DIVIDER__ !important;
+}
+[data-testid="stSidebar"] .stNumberInput button {
+    background: #1f2937 !important;
+    color: __TEXT_COLOR__ !important;
+    border: 1px solid __DIVIDER__ !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="select"] {
+    background: #1f2937 !important;
+    color: __TEXT_COLOR__ !important;
+    border: 1px solid __DIVIDER__ !important;
+}
+[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="select"],
+[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] {
+    background: #1f2937 !important;
+    color: __TEXT_COLOR__ !important;
+    border: 1px solid __DIVIDER__ !important;
+}
+[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="select"] > div,
+[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] > div {
+    background: transparent !important;
+}
+[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="select"] input,
+[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] input {
+    color: __TEXT_COLOR__ !important;
+}
+[data-testid="stSidebar"] .stMultiSelect div[data-baseweb="select"] div[data-baseweb="tag"],
+[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] div[data-baseweb="tag"] {
+    background: #1f2937 !important;
+    color: __TEXT_COLOR__ !important;
+    border: 1px solid __DIVIDER__ !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="popover"] {
+    background: #1f2937 !important;
+    color: __TEXT_COLOR__ !important;
+}
+[data-testid="stSidebar"] div[data-baseweb="tag"] {
+    background: #1f2937 !important;
+    color: __TEXT_COLOR__ !important;
+    border: 1px solid __DIVIDER__ !important;
+}
+[data-testid="stSidebar"] svg { fill: __TEXT_COLOR__; }
+[data-testid="stSidebar"] .st-bf {
+    color: __TEXT_COLOR__;
+}
+[data-testid="stSidebar"] .stCheckbox label {
+    color: __TEXT_COLOR__;
+}
+.stTabs [data-baseweb="tab-list"] button {
+    color: __TEXT_COLOR__;
+    background: __CARD_BG__;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 6px 6px 0 0;
+}
+[data-testid="stMetricLabel"], [data-testid="stMetricValue"] {
+    color: __TEXT_COLOR__;
+}
+[data-testid="stDataFrame"] table {
+    color: __TEXT_COLOR__;
+}
+[data-testid="stDataFrame"] div[role="grid"] {
+    background: __CARD_BG__;
+}
+[data-testid="stDataFrame"] thead th {
+    background: __DIVIDER__;
+    color: __TEXT_COLOR__;
+}
+[data-testid="stDataFrame"] div[role="columnheader"] {
+    background: __DIVIDER__;
+    color: __TEXT_COLOR__;
+}
+[data-testid="stDataFrame"] div[role="row"] {
+    background: __CARD_BG__;
+}
+[data-testid="stDataFrame"] div[role="gridcell"] {
+    background: __CARD_BG__;
+    color: __TEXT_COLOR__;
+}
+[data-testid="stDataFrame"] .stHorizontalBlock {
+    background: __CARD_BG__;
+}
+section[data-testid="stDataFrame"] table {
+    background: __CARD_BG__ !important;
+    color: __TEXT_COLOR__ !important;
+}
+section[data-testid="stDataFrame"] tbody tr td {
+    background: __CARD_BG__ !important;
+    color: __TEXT_COLOR__ !important;
+}
+section[data-testid="stDataFrame"] thead tr th {
+    background: __DIVIDER__ !important;
+    color: __TEXT_COLOR__ !important;
+}
+section[data-testid="stDataFrame"] tbody tr {
+    background: __CARD_BG__ !important;
+}
+section[data-testid="stDataFrame"] tbody tr:nth-child(even) {
+    background: #0d1324 !important;
+}
+section[data-testid="stDataFrame"] tbody tr:hover {
+    background: #10192f !important;
+}
+[data-testid="stVegaLiteChart"] {
+    background: __CARD_BG__;
+    padding: 8px;
+    border-radius: 8px;
+}
+[data-testid="stVegaLiteChart"] canvas {
+    background-color: __CARD_BG__ !important;
+}
+.dark-table-wrapper {
+    background: __CARD_BG__;
+    border: 1px solid __DIVIDER__;
+    border-radius: 8px;
+    padding: 6px;
+}
+.dark-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: __TEXT_COLOR__;
+    font-size: 13px;
+}
+.dark-table th {
+    position: sticky;
+    top: 0;
+    background: __DIVIDER__;
+    color: __TEXT_COLOR__;
+    text-align: left;
+    padding: 8px;
+}
+.dark-table td {
+    padding: 8px;
+    border-top: 1px solid __DIVIDER__;
+}
+.dark-table tr.even { background: __CARD_BG__; }
+.dark-table tr.odd { background: #0d1324; }
+.dark-table tr:hover { background: #10192f; }
+.orderbook-card {
+    background: __CARD_BG__;
+    border: 1px solid __DIVIDER__;
+    border-radius: 8px;
+    padding: 4px 8px;
+}
+.orderbook-card.vertical {
+    padding: 8px;
+    width: 100%;
+    max-width: 540px;
+    margin: 0 auto;
+}
+.orderbook-header-vertical {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    font-weight: 700;
+    color: __TEXT_COLOR__;
+    padding: 6px 4px;
+    text-align: center;
+}
+.orderbook-header-vertical .left { text-align: left; }
+.orderbook-header-vertical .center { text-align: center; }
+.orderbook-header-vertical .right { text-align: right; }
+.orderbook-table-vertical {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: "Segoe UI", sans-serif;
+    table-layout: fixed;
+}
+.orderbook-table-vertical .cell {
+    padding: 4px 6px;
+    font-size: 13px;
+    vertical-align: middle;
+}
+.orderbook-table-vertical tr:hover {
+    background: rgba(255,255,255,0.03);
+}
+.orderbook-table-vertical .red { color: __ACCENT_RED__; }
+.orderbook-table-vertical .green { color: __ACCENT_GREEN__; }
+.orderbook-table-vertical .amount.left { text-align: left; opacity: 0.9; }
+.orderbook-table-vertical .price.center { text-align: center; font-weight: 600; }
+.orderbook-table-vertical .amount.right { text-align: right; opacity: 0.9; }
+.orderbook-table-vertical .amount.spacer { color: transparent; }
+.orderbook-table-vertical tr.highlight {
+    background: rgba(96,165,250,0.12);
+}
+.orderbook-table-vertical tr.highlight .price {
+    color: #bfdbfe;
+    font-weight: 700;
+}
+.orderbook-table-vertical .mid-row td {
+    background: __DIVIDER__;
+    border-top: 1px solid __DIVIDER__;
+    border-bottom: 1px solid __DIVIDER__;
+}
+.orderbook-table-vertical .mid-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+.orderbook-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    font-weight: 600;
+    color: __TEXT_COLOR__;
+    padding: 6px 8px;
+    border-bottom: 1px solid __DIVIDER__;
+}
+.orderbook-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: "Segoe UI", sans-serif;
+}
+.orderbook-table .cell {
+    padding: 4px 8px;
+    text-align: right;
+    font-size: 13px;
+}
+.orderbook-table tr:hover {
+    background: rgba(255,255,255,0.04);
+}
+.orderbook-table .red { color: __ACCENT_RED__; }
+.orderbook-table .green { color: __ACCENT_GREEN__; }
+.orderbook-table .amount { opacity: 0.9; }
+.orderbook-table .price { font-weight: 600; }
+.mid-row td {
+    padding: 6px 8px;
+    background: __DIVIDER__;
+}
+.mid-wrapper {
+    display: flex;
+    justify-content: space-between;
+    color: __TEXT_COLOR__;
+    font-weight: 700;
+}
+.mid-spread {
+    color: __ACCENT_RED__;
+}
