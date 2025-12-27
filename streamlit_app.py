@@ -1,12 +1,16 @@
 """
-Streamlit mock UI for unified-arb-engine (UAG).
+Streamlit UI for unified-arb-engine (UAG).
 
-Uses only standard library and streamlit. REST calls are mocked with random data.
+Uses only standard library and streamlit. REST calls fetch live data when available.
 """
 
 from __future__ import annotations
 
+import json
 import random
+import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
 from textwrap import dedent
@@ -22,6 +26,10 @@ TEXT_COLOR = "#e5e7eb"
 ACCENT_GREEN = "#22c55e"
 ACCENT_RED = "#ef4444"
 DIVIDER = "#1f2937"
+
+# Selectable options
+AVAILABLE_EXCHANGES = ["bitbank", "bittrade", "zaif", "gmocoin"]
+AVAILABLE_SYMBOLS = ["MONA/JPY", "LTC/JPY", "XRP/JPY"]
 
 
 # ----------------------------------------------------------------------
@@ -132,6 +140,131 @@ def build_mock_time_series(points: int = 12) -> Tuple[List[str], List[float]]:
     labels = [(now - timedelta(minutes=5 * i)).strftime("%H:%M") for i in reversed(range(points))]
     values = [round(random.uniform(0.95, 1.05) * 1_000_000, 2) for _ in range(points)]
     return labels, values
+
+
+# ----------------------------------------------------------------------
+# API helpers
+# ----------------------------------------------------------------------
+def request_json(url: str, timeout_sec: float = 5.0) -> Tuple[int, Any | None]:
+    req = urllib.request.Request(url, headers={"Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+            status = resp.getcode()
+            body = resp.read().decode("utf-8")
+            return status, json.loads(body) if body else None
+    except urllib.error.HTTPError as exc:
+        return exc.code, None
+    except (urllib.error.URLError, ValueError):
+        return 0, None
+
+
+def normalize_base_url(api_base_url: str) -> str:
+    return api_base_url.rstrip("/")
+
+
+def fetch_orderbook(api_base_url: str, exchange: str, symbol: str, depth: int = 5) -> Dict[str, Any] | None:
+    base = normalize_base_url(api_base_url)
+    symbol_path = urllib.parse.quote(symbol, safe="")
+    url = f"{base}/api/v1/orderbooks/{urllib.parse.quote(exchange)}/{symbol_path}?depth={depth}"
+    status, data = request_json(url)
+    if status != 200 or not isinstance(data, dict):
+        return None
+    return data
+
+
+def fetch_opportunities(
+    api_base_url: str,
+    min_spread_pct: float = 0.0,
+    min_profit_jpy: float = 0.0,
+) -> List[Dict[str, Any]]:
+    base = normalize_base_url(api_base_url)
+    params = urllib.parse.urlencode(
+        {"min_spread_pct": min_spread_pct, "min_profit_jpy": min_profit_jpy}
+    )
+    url = f"{base}/api/v1/opportunities?{params}"
+    status, data = request_json(url)
+    if status != 200 or not isinstance(data, list):
+        return []
+    return data
+
+
+def fetch_portfolio(api_base_url: str) -> Dict[str, Any] | None:
+    base = normalize_base_url(api_base_url)
+    url = f"{base}/api/v1/portfolio"
+    status, data = request_json(url)
+    if status != 200 or not isinstance(data, dict):
+        return None
+    return data
+
+
+# ----------------------------------------------------------------------
+# Data mapping helpers
+# ----------------------------------------------------------------------
+def format_time_label(timestamp: str) -> str:
+    try:
+        ts = timestamp.replace("Z", "+00:00")
+        return datetime.fromisoformat(ts).strftime("%H:%M:%S")
+    except ValueError:
+        return timestamp
+
+
+def build_opportunity_rows(opportunities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for opp in opportunities:
+        buy_amount = opp.get("buy_available_amount")
+        sell_amount = opp.get("sell_available_amount")
+        min_amount = min(buy_amount, sell_amount) if buy_amount and sell_amount else None
+        buy_price = opp.get("buy_price")
+        sell_price = opp.get("sell_price")
+        spread_pct = opp.get("spread_pct")
+        spread_bps = round(spread_pct * 100, 2) if isinstance(spread_pct, (int, float)) else None
+        spread_jpy = opp.get("spread_jpy")
+        est_size_jpy = (
+            round(min_amount * min(buy_price, sell_price), 0)
+            if min_amount and buy_price and sell_price
+            else None
+        )
+        expected_profit_jpy = round(spread_jpy * min_amount, 2) if min_amount and spread_jpy else None
+        rows.append(
+            {
+                "時刻": format_time_label(str(opp.get("timestamp", ""))),
+                "通貨": opp.get("symbol", ""),
+                "買い取引所": opp.get("buy_exchange", ""),
+                "売り取引所": opp.get("sell_exchange", ""),
+                "買値": buy_price,
+                "売値": sell_price,
+                "スプレッド(bps)": spread_bps,
+                "スプレッド(円)": spread_jpy,
+                "想定サイズ": int(est_size_jpy) if isinstance(est_size_jpy, (int, float)) else "—",
+                "推定利益": expected_profit_jpy if expected_profit_jpy is not None else "—",
+                "_buy_exchange": opp.get("buy_exchange"),
+                "_sell_exchange": opp.get("sell_exchange"),
+                "_buy_price": buy_price,
+                "_sell_price": sell_price,
+            }
+        )
+    return rows
+
+
+def build_portfolio_positions(portfolio: Dict[str, Any]) -> List[Dict[str, Any]]:
+    positions: List[Dict[str, Any]] = []
+    balances = portfolio.get("balances", {})
+    for ex, ex_balances in balances.items():
+        if not isinstance(ex_balances, dict):
+            continue
+        for currency, balance in ex_balances.items():
+            if not isinstance(balance, dict):
+                continue
+            positions.append(
+                {
+                    "取引所": ex,
+                    "通貨": currency,
+                    "数量": balance.get("total", 0.0),
+                    "価格(JPY)": None,
+                    "評価額(JPY)": None,
+                }
+            )
+    return positions
 
 
 # ----------------------------------------------------------------------
@@ -336,12 +469,12 @@ def main() -> None:
     with st.sidebar:
         st.header("共通設定")
         api_base_url = st.text_input("API ベース URL", value="http://localhost:8000")
-        exchanges = st.multiselect("取引所選択", ["bitbank", "bittrade", "zaif"], default=["bitbank", "bittrade", "zaif"])
-        symbols = st.multiselect("通貨ペア選択", ["BTC/JPY", "MONA/JPY", "LTC/JPY"], default=["BTC/JPY", "MONA/JPY", "LTC/JPY"])
+        exchanges = st.multiselect("取引所選択", AVAILABLE_EXCHANGES, default=AVAILABLE_EXCHANGES)
+        symbols = st.multiselect("通貨ペア選択", AVAILABLE_SYMBOLS, default=AVAILABLE_SYMBOLS)
         refresh_sec = st.number_input("自動更新間隔 (秒)", min_value=1, max_value=300, value=15, step=1)
         auto_refresh = st.checkbox("自動更新 ON/OFF", value=True)
         st.divider()
-        st.caption("本モックはダミーデータで動作します。")
+        st.caption("APIに接続して表示します（未取得時は空表示）。")
 
     refresh_tick = st_autorefresh(interval=int(refresh_sec * 1000), key="auto_refresh") if auto_refresh else 0
     tab_dashboard, tab_orderbook, tab_arbitrage, tab_portfolio = st.tabs(
@@ -350,12 +483,14 @@ def main() -> None:
 
     with tab_dashboard:
         st.subheader("サマリー")
-        portfolio_data = fetch_mock_portfolio(api_base_url, exchanges)
-        opp_data = fetch_mock_opportunities(api_base_url, exchanges, symbols, limit=12)
+        portfolio_data = fetch_portfolio(api_base_url) or {"total_value_jpy": 0.0}
+        opportunities = fetch_opportunities(api_base_url)
+        opp_count = len(opportunities)
+        opp_data = build_opportunity_rows(opportunities)[:12]
         c1, c2, c3 = st.columns(3)
         c1.metric("総ポートフォリオ評価額 (JPY)", f"{portfolio_data['total_value_jpy']:,}")
         c2.metric("稼働中取引所数", len(exchanges) if exchanges else 0)
-        c3.metric("アービトラ機会数", len(opp_data))
+        c3.metric("アービトラ機会数", opp_count)
         st.subheader("アービトラ機会一覧")
         render_dark_table(
             opp_data,
@@ -377,7 +512,9 @@ def main() -> None:
                 opp_cache_ver = st.session_state["opp_cache_ver"]
                 opp_key = sym
                 if opp_cache_ver.get(opp_key) != refresh_tick:
-                    opp_cache[opp_key] = fetch_mock_opportunities(api_base_url, exchanges, [sym], limit=5)
+                    all_opps = fetch_opportunities(api_base_url)
+                    filtered = [opp for opp in all_opps if opp.get("symbol") == sym]
+                    opp_cache[opp_key] = build_opportunity_rows(filtered)[:5]
                     opp_cache_ver[opp_key] = refresh_tick
                 top_opps = opp_cache.get(opp_key, [])
                 highlight_state_key = f"highlight_{sym}"
@@ -402,7 +539,7 @@ def main() -> None:
                     ob_cache_ver = st.session_state["orderbook_cache_ver"]
                     ob_key = f"{ex}:{sym}"
                     if ob_cache_ver.get(ob_key) != refresh_tick:
-                        ob_cache[ob_key] = fetch_mock_orderbook(api_base_url, ex, sym)
+                        ob_cache[ob_key] = fetch_orderbook(api_base_url, ex, sym, depth=5)
                         ob_cache_ver[ob_key] = refresh_tick
                     ob = ob_cache[ob_key]
                     highlight = None
@@ -413,8 +550,11 @@ def main() -> None:
                         elif ex == h_state.get("売り取引所"):
                             highlight = {"role": "sell", "price": h_state.get("売値")}
                     with col:
-                        st.markdown(f"**{ob['exchange']}**  (更新: {ob['timestamp']})")
-                        render_orderbook_table(ob, highlight=highlight)
+                        if not ob:
+                            st.warning("板情報が取得できません。")
+                        else:
+                            st.markdown(f"**{ob['exchange']}**  (更新: {ob['timestamp']})")
+                            render_orderbook_table(ob, highlight=highlight)
                 st.divider()
 
     with tab_arbitrage:
@@ -422,9 +562,11 @@ def main() -> None:
         f1, f2 = st.columns(2)
         min_spread = f1.slider("最低スプレッド (bps)", min_value=-10.0, max_value=100.0, value=5.0, step=0.5)
         min_profit = f2.slider("最低利益 (JPY)", min_value=0, max_value=50000, value=500, step=100)
-        opportunities = fetch_mock_opportunities(
-            api_base_url, exchanges, symbols, limit=20, min_spread_bps=min_spread, min_profit_jpy=float(min_profit)
+        min_spread_pct = max(min_spread, 0.0) / 100.0
+        opportunities = fetch_opportunities(
+            api_base_url, min_spread_pct=min_spread_pct, min_profit_jpy=float(min_profit)
         )
+        opportunities = build_opportunity_rows(opportunities)
         render_dark_table(
             opportunities,
             ["時刻", "通貨", "買い取引所", "売り取引所", "買値", "売値", "スプレッド(bps)", "スプレッド(円)", "想定サイズ", "推定利益"],
@@ -433,40 +575,46 @@ def main() -> None:
 
     with tab_portfolio:
         st.subheader("ポートフォリオ")
-        portfolio_data = fetch_mock_portfolio(api_base_url, exchanges)
-        c1, c2 = st.columns(2)
-        c1.metric("総評価額 (JPY)", f"{portfolio_data['total_value_jpy']:,}")
-        c2.metric("保有銘柄数", len(portfolio_data["positions"]))
-        st.write("取引所別ポートフォリオ")
-        positions = portfolio_data["positions"]
-        exchanges_list = sorted(list({p["取引所"] for p in positions}))
-        assets = sorted(list({p["通貨"] for p in positions}))
-        total_port_value = sum(p["評価額(JPY)"] for p in positions)
-        matrix_rows: List[Dict[str, Any]] = []
-        asset_values: List[float] = []
-        asset_amounts: List[float] = []
-        for asset in assets:
-            row: Dict[str, Any] = {"通貨": asset}
-            asset_positions = [p for p in positions if p["通貨"] == asset]
-            total_amount = sum(p["数量"] for p in asset_positions)
-            total_value_asset = sum(p["評価額(JPY)"] for p in asset_positions)
-            price = round(total_value_asset / total_amount, 2) if total_amount > 0 else 0.0
-            for ex in exchanges_list:
-                amt = next((p["数量"] for p in asset_positions if p["取引所"] == ex), 0.0)
-                row[ex] = "—" if amt == 0 else f"{amt:,.4f}"
-            row["総数量"] = f"{total_amount:,.4f}"
-            row["Price(JPY)"] = "—" if price == 0 else f"{price:,.2f}"
-            row["Value(JPY)"] = f"{total_value_asset:,.2f}"
-            share = (total_value_asset / total_port_value * 100) if total_port_value else 0.0
-            row["Share"] = f"{share:,.1f}%"
-            matrix_rows.append(row)
-            asset_values.append(total_value_asset)
-            asset_amounts.append(total_amount)
-        matrix_columns = ["通貨"] + exchanges_list + ["総数量", "Price(JPY)", "Value(JPY)", "Share"]
-        render_dark_table(matrix_rows, matrix_columns, height=420)
-        st.write(f"総評価額 (JPY): {total_port_value:,.0f}")
-        st.write("簡易ポートフォリオ構成（円グラフ）")
-        render_dark_pie_chart(assets, asset_values, asset_amounts, height=340)
+        portfolio_data = fetch_portfolio(api_base_url)
+        if not portfolio_data:
+            st.warning("ポートフォリオ情報が取得できません。")
+        else:
+            c1, c2 = st.columns(2)
+            c1.metric("総評価額 (JPY)", f"{portfolio_data['total_value_jpy']:,}")
+            positions = build_portfolio_positions(portfolio_data)
+            c2.metric("保有銘柄数", len(positions))
+            st.write("取引所別ポートフォリオ")
+            exchanges_list = sorted(list({p["取引所"] for p in positions}))
+            assets = sorted(list({p["通貨"] for p in positions}))
+            total_port_value = portfolio_data.get("total_value_jpy") or 0.0
+            matrix_rows: List[Dict[str, Any]] = []
+            asset_values: List[float] = []
+            asset_amounts: List[float] = []
+            for asset in assets:
+                row: Dict[str, Any] = {"通貨": asset}
+                asset_positions = [p for p in positions if p["通貨"] == asset]
+                total_amount = sum(p["数量"] for p in asset_positions)
+                total_value_asset = sum(p["評価額(JPY)"] or 0.0 for p in asset_positions)
+                price = round(total_value_asset / total_amount, 2) if total_amount > 0 and total_value_asset else 0.0
+                for ex in exchanges_list:
+                    amt = next((p["数量"] for p in asset_positions if p["取引所"] == ex), 0.0)
+                    row[ex] = "—" if amt == 0 else f"{amt:,.4f}"
+                row["総数量"] = f"{total_amount:,.4f}"
+                row["Price(JPY)"] = "—" if price == 0 else f"{price:,.2f}"
+                row["Value(JPY)"] = "—" if total_value_asset == 0 else f"{total_value_asset:,.2f}"
+                share = (total_value_asset / total_port_value * 100) if total_port_value and total_value_asset else None
+                row["Share"] = f"{share:,.1f}%" if share is not None else "—"
+                matrix_rows.append(row)
+                asset_values.append(total_value_asset)
+                asset_amounts.append(total_amount)
+            matrix_columns = ["通貨"] + exchanges_list + ["総数量", "Price(JPY)", "Value(JPY)", "Share"]
+            render_dark_table(matrix_rows, matrix_columns, height=420)
+            st.write(f"総評価額 (JPY): {total_port_value:,.0f}")
+            st.write("簡易ポートフォリオ構成（円グラフ）")
+            if any(asset_values):
+                render_dark_pie_chart(assets, asset_values, asset_amounts, height=340)
+            else:
+                st.info("評価額情報が取得できないため、円グラフは省略しています。")
 
 
 if __name__ == "__main__":
