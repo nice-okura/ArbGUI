@@ -195,7 +195,7 @@ def render_dark_line_chart(labels: List[str], values: List[float], height: int =
             },
         },
     }
-    st.vega_lite_chart(spec, use_container_width=True, height=height)
+    st.vega_lite_chart(spec, width="stretch", height=height)
 
 
 def render_dark_pie_chart(labels: List[str], values: List[float], amounts: List[float], height: int = 320) -> None:
@@ -232,7 +232,7 @@ def render_dark_pie_chart(labels: List[str], values: List[float], amounts: List[
         ],
         "config": {"background": PRIMARY_BG, "view": {"stroke": None}, "arc": {"stroke": PRIMARY_BG, "strokeWidth": 1}},
     }
-    st.vega_lite_chart(spec, use_container_width=True, height=height)
+    st.vega_lite_chart(spec, width="stretch", height=height)
 
 
 def render_orderbook_table(orderbook: Dict[str, Any], highlight: Dict[str, Any] | None = None) -> None:
