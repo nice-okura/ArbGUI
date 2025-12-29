@@ -11,7 +11,7 @@ import random
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from textwrap import dedent
 from typing import Any, Dict, List, Tuple
@@ -200,10 +200,14 @@ def fetch_portfolio(api_base_url: str) -> Dict[str, Any] | None:
 # ----------------------------------------------------------------------
 # Data mapping helpers
 # ----------------------------------------------------------------------
-def format_time_label(timestamp: str) -> str:
+def format_time_label(timestamp: str, with_date: bool = False) -> str:
     try:
         ts = timestamp.replace("Z", "+00:00")
-        return datetime.fromisoformat(ts).strftime("%H:%M:%S")
+        dt = datetime.fromisoformat(ts)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.astimezone(timezone(timedelta(hours=9)))
+        return dt.strftime("%Y-%m-%d %H:%M:%S" if with_date else "%H:%M:%S")
     except ValueError:
         return timestamp
 
@@ -260,8 +264,8 @@ def build_portfolio_positions(portfolio: Dict[str, Any]) -> List[Dict[str, Any]]
                     "取引所": ex,
                     "通貨": currency,
                     "数量": balance.get("total", 0.0),
-                    "価格(JPY)": None,
-                    "評価額(JPY)": None,
+                    "価格(JPY)": balance.get("price_jpy"),
+                    "評価額(JPY)": balance.get("value_jpy"),
                 }
             )
     return positions
@@ -534,7 +538,8 @@ def main() -> None:
                     )
                     st.session_state[highlight_state_key] = {"row": selected_idx, **top_opps[selected_idx]}
                 cols = st.columns(len(exchanges))
-                for col, ex in zip(cols, exchanges):
+                available: List[Tuple[str, Dict[str, Any]]] = []
+                for ex in exchanges:
                     ob_cache = st.session_state["orderbook_cache"]
                     ob_cache_ver = st.session_state["orderbook_cache_ver"]
                     ob_key = f"{ex}:{sym}"
@@ -542,6 +547,14 @@ def main() -> None:
                         ob_cache[ob_key] = fetch_orderbook(api_base_url, ex, sym, depth=5)
                         ob_cache_ver[ob_key] = refresh_tick
                     ob = ob_cache[ob_key]
+                    if ob:
+                        available.append((ex, ob))
+                if not available:
+                    st.caption("板情報が取得できませんでした。")
+                    st.divider()
+                    continue
+                cols = st.columns(len(available))
+                for col, (ex, ob) in zip(cols, available):
                     highlight = None
                     h_state = st.session_state.get(highlight_state_key, {})
                     if h_state:
@@ -550,11 +563,9 @@ def main() -> None:
                         elif ex == h_state.get("売り取引所"):
                             highlight = {"role": "sell", "price": h_state.get("売値")}
                     with col:
-                        if not ob:
-                            st.warning("板情報が取得できません。")
-                        else:
-                            st.markdown(f"**{ob['exchange']}**  (更新: {ob['timestamp']})")
-                            render_orderbook_table(ob, highlight=highlight)
+                        updated_at = format_time_label(str(ob["timestamp"]), with_date=True)
+                        st.markdown(f"**{ob['exchange']}**  (更新: {updated_at})")
+                        render_orderbook_table(ob, highlight=highlight)
                 st.divider()
 
     with tab_arbitrage:
