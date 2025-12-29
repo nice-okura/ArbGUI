@@ -39,12 +39,25 @@ def print_result(ok: bool, label: str, detail: str = "") -> None:
         print(f"[{status}] {label}")
 
 
+def print_payload(label: str, data: Any, max_chars: int = 2000) -> None:
+    if data is None:
+        return
+    if isinstance(data, (dict, list)):
+        payload = json.dumps(data, ensure_ascii=False, indent=2)
+    else:
+        payload = str(data)
+    if len(payload) > max_chars:
+        payload = payload[: max_chars - 3] + "..."
+    print(f"[DATA] {label}:\n{payload}\n")
+
+
 def test_arbgui(base_url: str, exchange: str, symbol: str) -> int:
     failures = 0
     symbol_path = urllib.parse.quote(symbol, safe="")
 
     orderbook_url = f"{base_url}/v1/orderbook/{exchange}/{symbol_path}/latest"
     status, data = fetch_json(orderbook_url)
+    print_payload("orderbook latest", data)
     if status != 200 or not isinstance(data, dict):
         print_result(False, "orderbook latest", f"status={status}")
         failures += 1
@@ -66,6 +79,7 @@ def test_arbgui(base_url: str, exchange: str, symbol: str) -> int:
 
     opp_url = f"{base_url}/v1/opportunities/latest"
     status, data = fetch_json(opp_url)
+    print_payload("opportunities latest", data)
     if status != 200 or not ensure_list(data):
         print_result(False, "opportunities latest", f"status={status}")
         failures += 1
@@ -90,6 +104,7 @@ def test_arbgui(base_url: str, exchange: str, symbol: str) -> int:
 
     portfolio_url = f"{base_url}/v1/portfolio"
     status, data = fetch_json(portfolio_url)
+    print_payload("portfolio", data)
     if status != 200 or not isinstance(data, dict):
         print_result(False, "portfolio", f"status={status}")
         failures += 1
@@ -109,6 +124,7 @@ def test_openapi(base_url: str, exchange: str, symbol: str) -> int:
 
     health_url = f"{base_url}/api/v1/health"
     status, data = fetch_json(health_url)
+    print_payload("health", data)
     ok = status == 200 and isinstance(data, dict) and "status" in data
     print_result(ok, "health", f"status={status}")
     failures += 0 if ok else 1
@@ -118,6 +134,7 @@ def test_openapi(base_url: str, exchange: str, symbol: str) -> int:
         f"exchange={urllib.parse.quote(exchange)}&symbol={symbol_qs}&depth=5"
     )
     status, data = fetch_json(orderbook_url)
+    print_payload("orderbooks list", data)
     if status != 200 or not ensure_list(data):
         print_result(False, "orderbooks list", f"status={status}")
         failures += 1
@@ -132,6 +149,7 @@ def test_openapi(base_url: str, exchange: str, symbol: str) -> int:
 
     orderbook_one_url = f"{base_url}/api/v1/orderbooks/{urllib.parse.quote(exchange)}/{symbol_path}?depth=5"
     status, data = fetch_json(orderbook_one_url)
+    print_payload("orderbooks single", data)
     if status != 200 or not isinstance(data, dict):
         print_result(False, "orderbooks single", f"status={status}")
         failures += 1
@@ -143,6 +161,7 @@ def test_openapi(base_url: str, exchange: str, symbol: str) -> int:
 
     orderbook_hist_url = f"{base_url}/api/v1/orderbooks/history?limit=5"
     status, data = fetch_json(orderbook_hist_url)
+    print_payload("orderbooks history", data)
     if status != 200 or not ensure_list(data):
         print_result(False, "orderbooks history", f"status={status}")
         failures += 1
@@ -157,6 +176,7 @@ def test_openapi(base_url: str, exchange: str, symbol: str) -> int:
 
     opp_url = f"{base_url}/api/v1/opportunities"
     status, data = fetch_json(opp_url)
+    print_payload("opportunities", data)
     if status != 200 or not ensure_list(data):
         print_result(False, "opportunities", f"status={status}")
         failures += 1
@@ -180,6 +200,7 @@ def test_openapi(base_url: str, exchange: str, symbol: str) -> int:
 
     opp_hist_url = f"{base_url}/api/v1/opportunities/history?limit=5"
     status, data = fetch_json(opp_hist_url)
+    print_payload("opportunities history", data)
     if status != 200 or not ensure_list(data):
         print_result(False, "opportunities history", f"status={status}")
         failures += 1
@@ -203,6 +224,7 @@ def test_openapi(base_url: str, exchange: str, symbol: str) -> int:
 
     portfolio_url = f"{base_url}/api/v1/portfolio"
     status, data = fetch_json(portfolio_url)
+    print_payload("portfolio", data)
     if status != 200 or not isinstance(data, dict):
         print_result(False, "portfolio", f"status={status}")
         failures += 1
@@ -214,6 +236,7 @@ def test_openapi(base_url: str, exchange: str, symbol: str) -> int:
 
     exec_summary_url = f"{base_url}/api/v1/executions/summary"
     status, data = fetch_json(exec_summary_url)
+    print_payload("executions summary", data)
     if status != 200 or not isinstance(data, dict):
         print_result(False, "executions summary", f"status={status}")
         failures += 1
@@ -232,6 +255,7 @@ def test_openapi(base_url: str, exchange: str, symbol: str) -> int:
 
     exec_hist_url = f"{base_url}/api/v1/executions/history?limit=5"
     status, data = fetch_json(exec_hist_url)
+    print_payload("executions history", data)
     if status != 200 or not ensure_list(data):
         print_result(False, "executions history", f"status={status}")
         failures += 1
@@ -254,6 +278,7 @@ def test_openapi(base_url: str, exchange: str, symbol: str) -> int:
 
     stats_url = f"{base_url}/api/v1/stats"
     status, data = fetch_json(stats_url)
+    print_payload("stats", data)
     if status != 200 or not isinstance(data, dict):
         print_result(False, "stats", f"status={status}")
         failures += 1
@@ -276,6 +301,7 @@ def test_openapi(base_url: str, exchange: str, symbol: str) -> int:
 
     all_url = f"{base_url}/api/v1/data/all"
     status, data = fetch_json(all_url)
+    print_payload("data all", data)
     if status != 200 or not isinstance(data, dict):
         print_result(False, "data all", f"status={status}")
         failures += 1
